@@ -1,7 +1,7 @@
 {
     "namespace":  "Smurfhub",
     "name":  "RemoveStartTemple",
-    "version_number":  "0.8.2",
+    "version_number":  "0.8.4",
     "website_url":  "",
     "description":  "",
     "dependencies":  [

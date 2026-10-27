@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace RemoveStartTemple
 {
-    [BepInPlugin("es.uyimbube.removestarttemple", "RemoveStartTemple", "0.8.2")]
+    [BepInPlugin("es.uyimbube.removestarttemple", "RemoveStartTemple", "0.8.4")]
     public sealed class RemoveStartTemplePlugin : BaseUnityPlugin
     {
         private Harmony _harmony;
@@ -106,11 +106,20 @@ namespace RemoveStartTemple
             public bool Changed;
         }
 
+        internal static string GetPowerName(ItemStand stand)
+        {
+            if (ObjectDB.instance == null || stand == null)
+                return null;
+
+            var item = ObjectDB.instance.GetItemPrefab(stand.GetAttachedItem());
+            return item != null && Powers.TryGetValue(item.name, out var powerName) ? powerName : null;
+        }
+
         private static void Prefix(ItemStand __instance, out Effects __state)
         {
             __state = default;
-            var item = ObjectDB.instance.GetItemPrefab(__instance.GetAttachedItem());
-            if (item != null && Powers.TryGetValue(item.name, out var powerName))
+            var powerName = GetPowerName(__instance);
+            if (powerName != null)
             {
                 var power = ObjectDB.instance.m_StatusEffects.Find(effect => effect.name == powerName);
                 if (power == null)
@@ -158,6 +167,32 @@ namespace RemoveStartTemple
 
             __instance.m_activatePowerEffects = __state.World;
             __instance.m_activatePowerEffectsPlayer = __state.Player;
+        }
+    }
+
+    [HarmonyPatch(typeof(ItemStand), nameof(ItemStand.GetHoverText))]
+    internal static class BossTrophyHoverText
+    {
+        private static void Postfix(ItemStand __instance, ref string __result)
+        {
+            if (!__instance.m_canBeRemoved || string.IsNullOrEmpty(__result) ||
+                !PrivateArea.CheckAccess(__instance.transform.position, 0f, flash: false))
+                return;
+
+            var powerName = BossTrophyPower.GetPowerName(__instance);
+            if (powerName == null)
+                return;
+
+            var power = ObjectDB.instance.m_StatusEffects.Find(effect => effect.name == powerName);
+            if (power == null)
+                return;
+
+            var action = Player.m_localPlayer.GetGuardianPowerName() == power.name
+                ? "$guardianstone_hook_alreadyactive"
+                : "[<color=yellow><b>$KEY_Use</b></color>] $guardianstone_hook_activate";
+
+            __result += "\n" + Localization.instance.Localize(
+                $"<color=orange>{power.m_name}</color>\n{power.GetTooltipString()}\n\n{action}");
         }
     }
 }
