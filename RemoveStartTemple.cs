@@ -1,11 +1,12 @@
 using System.Collections;
+using System.Collections.Generic;
 using BepInEx;
 using HarmonyLib;
 using UnityEngine;
 
 namespace RemoveStartTemple
 {
-    [BepInPlugin("es.uyimbube.removestarttemple", "RemoveStartTemple", "0.7.1")]
+    [BepInPlugin("es.uyimbube.removestarttemple", "RemoveStartTemple", "0.8.2")]
     public sealed class RemoveStartTemplePlugin : BaseUnityPlugin
     {
         private Harmony _harmony;
@@ -81,6 +82,82 @@ namespace RemoveStartTemple
         {
             if (__result && (!ZoneSystem.instance.LocationsGenerated || !ZoneSystem.instance.IsActiveAreaLoaded()))
                 __result = false;
+        }
+    }
+
+    [HarmonyPatch(typeof(ItemStand), nameof(ItemStand.Interact))]
+    internal static class BossTrophyPower
+    {
+        private static readonly Dictionary<string, string> Powers = new Dictionary<string, string>
+        {
+            ["TrophyEikthyr"] = "GP_Eikthyr",
+            ["TrophyTheElder"] = "GP_TheElder",
+            ["TrophyBonemass"] = "GP_Bonemass",
+            ["TrophyDragonQueen"] = "GP_Moder",
+            ["TrophyGoblinKing"] = "GP_Yagluth",
+            ["TrophySeekerQueen"] = "GP_Queen",
+            ["TrophyFader"] = "GP_Ashlands"
+        };
+
+        private struct Effects
+        {
+            public EffectList World;
+            public EffectList Player;
+            public bool Changed;
+        }
+
+        private static void Prefix(ItemStand __instance, out Effects __state)
+        {
+            __state = default;
+            var item = ObjectDB.instance.GetItemPrefab(__instance.GetAttachedItem());
+            if (item != null && Powers.TryGetValue(item.name, out var powerName))
+            {
+                var power = ObjectDB.instance.m_StatusEffects.Find(effect => effect.name == powerName);
+                if (power == null)
+                    return;
+
+                __instance.m_guardianPower = power;
+                var source = FindPowerStand(__instance, powerName);
+                if (source != null)
+                {
+                    __state = new Effects { World = __instance.m_activatePowerEffects, Player = __instance.m_activatePowerEffectsPlayer, Changed = true };
+                    __instance.m_activatePowerEffects = source.m_activatePowerEffects;
+                    __instance.m_activatePowerEffectsPlayer = source.m_activatePowerEffectsPlayer;
+                }
+            }
+            else if (__instance.m_guardianPower != null && Powers.ContainsValue(__instance.m_guardianPower.name))
+            {
+                __instance.m_guardianPower = null;
+            }
+        }
+
+        private static ItemStand FindPowerStand(ItemStand target, string powerName)
+        {
+            var source = ZNetScene.instance.GetPrefab(powerName)?.GetComponent<ItemStand>();
+            if (HasPowerEffects(source, target, powerName))
+                return source;
+
+            foreach (var candidate in Resources.FindObjectsOfTypeAll<ItemStand>())
+                if (HasPowerEffects(candidate, target, powerName))
+                    return candidate;
+
+            return null;
+        }
+
+        private static bool HasPowerEffects(ItemStand stand, ItemStand target, string powerName)
+        {
+            return stand != null && stand != target && stand.m_guardianPower != null &&
+                   stand.m_guardianPower.name == powerName &&
+                   (stand.m_activatePowerEffects.HasEffects() || stand.m_activatePowerEffectsPlayer.HasEffects());
+        }
+
+        private static void Postfix(ItemStand __instance, Effects __state)
+        {
+            if (!__state.Changed)
+                return;
+
+            __instance.m_activatePowerEffects = __state.World;
+            __instance.m_activatePowerEffectsPlayer = __state.Player;
         }
     }
 }
