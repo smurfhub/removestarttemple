@@ -1,0 +1,2 @@
+# removestarttemple
+Remove StartTemple
