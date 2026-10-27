@@ -5,19 +5,29 @@
     <Nullable>disable</Nullable>
     <AssemblyName>RemoveStartTemple</AssemblyName>
     <RootNamespace>RemoveStartTemple</RootNamespace>
+    <ValheimManagedDir Condition="'$(ValheimManagedDir)' == ''">$(ValheimServerDir)\valheim_server_Data\Managed</ValheimManagedDir>
+    <BepInExCoreDir Condition="'$(BepInExCoreDir)' == ''">$(ValheimServerDir)\BepInEx\core</BepInExCoreDir>
   </PropertyGroup>
 
   <ItemGroup>
+    <Reference Include="assembly_valheim">
+      <HintPath>$(ValheimManagedDir)\assembly_valheim.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="BepInEx">
-      <HintPath>$(ValheimServerDir)\BepInEx\core\BepInEx.dll</HintPath>
+      <HintPath>$(BepInExCoreDir)\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(BepInExCoreDir)\0Harmony.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>$(ValheimServerDir)\valheim_server_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>$(ValheimManagedDir)\UnityEngine.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>$(ValheimServerDir)\valheim_server_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>$(ValheimManagedDir)\UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
